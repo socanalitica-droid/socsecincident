@@ -27,9 +27,11 @@ class PluginSocsecincidentTicketAction {
             return [];
         }
 
-        // Once the incident reaches the last stage (Cerrado) the ticket is
-        // already closed by us — nothing left to advance to.
-        $current_state = PluginSocsecincidentConfig::getIncidentState($ticket->getID());
+        // Once the incident reaches the last stage (Cerrado) *and the ticket
+        // is still actually closed*, there's nothing left to advance to. If
+        // the ticket got reopened since, getEffectiveIncidentState() already
+        // resets this back to "not declared", so the button reappears.
+        $current_state = PluginSocsecincidentConfig::getEffectiveIncidentState($ticket);
         if ($current_state === 'Cerrado') {
             return [];
         }
@@ -55,7 +57,7 @@ class PluginSocsecincidentTicketAction {
         /** @var Ticket $ticket */
         $ticket = $options['parent'];
 
-        $current_state = PluginSocsecincidentConfig::getIncidentState($ticket->getID());
+        $current_state = PluginSocsecincidentConfig::getEffectiveIncidentState($ticket);
         $rand          = mt_rand();
         $action_url    = Plugin::getWebDir('socsecincident') . '/front/ticketaction.form.php';
 

@@ -28,7 +28,7 @@ $entities_id = (int) $ticket->fields['entities_id'];
 // ── Advance an already-declared incident to its next lifecycle stage ───────
 
 if (isset($_POST['confirm_security_incident_progress'])) {
-    $current_state = PluginSocsecincidentConfig::getIncidentState($tickets_id);
+    $current_state = PluginSocsecincidentConfig::getEffectiveIncidentState($ticket);
     $next_stages   = PluginSocsecincidentConfig::getNextStages($current_state);
     $new_state     = $_POST['new_state'] ?? '';
 

@@ -118,6 +118,19 @@ class PluginSocsecincidentConfig extends CommonGLPI {
         return null;
     }
 
+    // Same as getIncidentState(), except "Cerrado" only counts as the
+    // terminal stage while the ticket is actually still closed. Reopening a
+    // ticket that this plugin closed resets its lifecycle back to "not
+    // declared" — otherwise the button would stay hidden forever, since the
+    // stored field value never changes on its own when a ticket reopens.
+    static function getEffectiveIncidentState(Ticket $ticket): ?string {
+        $state = self::getIncidentState((int) $ticket->getID());
+        if ($state === 'Cerrado' && (int) $ticket->fields['status'] !== Ticket::CLOSED) {
+            return null;
+        }
+        return $state;
+    }
+
     // Stages strictly after $current_state. Empty array if not declared yet
     // (nothing to advance to) or already at the last stage (Cerrado).
     static function getNextStages(?string $current_state): array {
