@@ -44,8 +44,55 @@ if (isset($_POST['confirm_security_incident_progress'])) {
         exit();
     }
 
+    $final_classification_labels = [
+        'materialized'     => __('Materializado', 'socsecincident'),
+        'not_materialized' => __('No materializado', 'socsecincident'),
+    ];
+
+    // Closing asks one more required question — the initial classification
+    // (Materializado/No materializado/Pendiente Veredicto) may have been a
+    // guess made while still investigating; the final answer only has two
+    // valid values, so it's asked again rather than reused.
+    if ($new_state === 'Cerrado') {
+        $final_classification = $_POST['final_classification'] ?? '';
+        if (!isset($final_classification_labels[$final_classification])) {
+            Session::addMessageAfterRedirect(
+                __('Debes indicar la clasificación final (Materializado o No materializado) para cerrar el incidente.', 'socsecincident'),
+                true,
+                ERROR
+            );
+            Html::back();
+            exit();
+        }
+
+        // socfields normally blocks Ticket::update() itself when Acción Tomada/
+        // Causa Raíz aren't filled for a Closed transition — but we close via a
+        // direct glpi_tickets write below, which skips that hook entirely. Enforce
+        // the same rule here so this plugin can't silently violate it.
+        $missing = PluginSocsecincidentConfig::getMissingSocfieldsRequirements(
+            $tickets_id,
+            (int) $ticket->fields['itilcategories_id']
+        );
+        if (!empty($missing)) {
+            Session::addMessageAfterRedirect(
+                sprintf(
+                    __('No puedes cerrar el incidente: falta diligenciar %s en el ticket.', 'socsecincident'),
+                    implode(', ', $missing)
+                ),
+                true,
+                ERROR
+            );
+            Html::back();
+            exit();
+        }
+    }
+
     $comment = trim($_POST['comment'] ?? '');
     $content = '<strong>' . __('Estado del incidente actualizado a', 'socsecincident') . ':</strong> ' . $new_state;
+    if ($new_state === 'Cerrado') {
+        $content .= '<br><strong>' . __('Clasificación final', 'socsecincident') . ':</strong> '
+            . $final_classification_labels[$final_classification];
+    }
     if ($comment !== '') {
         $content = $comment . '<br><br>' . $content;
     }
@@ -61,6 +108,12 @@ if (isset($_POST['confirm_security_incident_progress'])) {
     PluginSocsecincidentConfig::setIncidentState($tickets_id, $entities_id, $new_state);
 
     if ($new_state === 'Cerrado') {
+        PluginSocsecincidentConfig::setClassification(
+            $tickets_id,
+            $entities_id,
+            $final_classification_labels[$final_classification]
+        );
+
         // Direct write, same proven approach used for bulk-closing tickets on
         // this instance: Ticket::update() enforces GLPI's mandatory-fields-
         // before-close policy (e.g. technician assignment), which would
@@ -198,6 +251,7 @@ $DB->insert('glpi_plugin_socsecincident_incidents', [
 
 // First stage of the lifecycle — matches PluginSocsecincidentConfig::STAGES[0].
 PluginSocsecincidentConfig::setIncidentState($tickets_id, $entities_id, 'Investigación');
+PluginSocsecincidentConfig::setClassification($tickets_id, $entities_id, $classification_labels[$classification]);
 
 Session::addMessageAfterRedirect(
     __('Ticket marcado como Incidente de Seguridad.', 'socsecincident'),

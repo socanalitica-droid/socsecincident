@@ -38,8 +38,30 @@
                             'required': true,
                             'label': true,
                             'rand': rand,
+                            'on_change': 'socsecincident_toggle_final_classification' ~ rand ~ '(this.value)',
                         }
                     ) }}
+
+                    {# Only relevant when advancing straight to "Cerrado": the initial
+                       classification chosen on declare may no longer hold, so ask again
+                       — restricted to the two final answers, no "Pendiente Veredicto". #}
+                    <div class="form-field col-12 mt-2" id="socsecincident_final_classification_{{ rand }}" style="display:none;">
+                        {{ fields.dropdownArrayField(
+                            'final_classification',
+                            '',
+                            {
+                                '': '-- ' ~ __('Selecciona la clasificación final', 'socsecincident') ~ ' --',
+                                'materialized': __('Materializado', 'socsecincident'),
+                                'not_materialized': __('No materializado', 'socsecincident'),
+                            },
+                            __('Clasificación final', 'socsecincident'),
+                            {
+                                'full_width': true,
+                                'label': true,
+                                'rand': rand,
+                            }
+                        ) }}
+                    </div>
 
                     <div class="form-field col-12 mt-2">
                         {% set fup_template_lbl %}
@@ -95,6 +117,19 @@
     </div>
     {% if next_stages is not empty %}
     <script>
+        function socsecincident_toggle_final_classification{{ rand }}(value) {
+            var wrapper = document.getElementById('socsecincident_final_classification_{{ rand }}');
+            var select  = document.getElementById('dropdown_final_classification{{ rand }}');
+            if (!wrapper) {
+                return;
+            }
+            var is_closing = (value === 'Cerrado');
+            wrapper.style.display = is_closing ? '' : 'none';
+            if (select) {
+                select.required = is_closing;
+            }
+        }
+
         function socsecincident_progress_template_update{{ rand }}(value) {
             $.ajax({
                 url: `${CFG_GLPI.root_doc}/ajax/itilfollowup.php`,

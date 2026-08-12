@@ -18,6 +18,11 @@ class PluginSocsecincidentConfig extends CommonGLPI {
     const FIELDS_STATE_COLUMN = 'estadoincidenteseguridadfield';
     const FIELDS_CONTAINER_ID = 2;
 
+    // "Incidente Seguridad" field, same container — mirrors the classification
+    // chosen in this plugin's modals (Materializado/No materializado/
+    // Pendiente Veredicto on declare, Materializado/No materializado on close).
+    const CLASSIFICATION_COLUMN = 'incidenteseguridadfield';
+
     // Incident lifecycle, in forward-only order. Declaring the incident
     // (first use of the timeline button) jumps straight to the first stage;
     // every later use of the same button advances to a stage further down
@@ -142,21 +147,79 @@ class PluginSocsecincidentConfig extends CommonGLPI {
     }
 
     static function setIncidentState(int $tickets_id, int $entities_id, string $state): void {
+        self::setFieldsColumn($tickets_id, $entities_id, self::FIELDS_STATE_COLUMN, $state);
+    }
+
+    // ── Classification ("Incidente Seguridad") ──────────────────────────────────
+
+    static function setClassification(int $tickets_id, int $entities_id, string $label): void {
+        self::setFieldsColumn($tickets_id, $entities_id, self::CLASSIFICATION_COLUMN, $label);
+    }
+
+    // Shared upsert for any column on the "secop" container row.
+    static function setFieldsColumn(int $tickets_id, int $entities_id, string $column, string $value): void {
         global $DB;
         $exists = false;
         foreach ($DB->request(['FROM' => self::FIELDS_TABLE, 'WHERE' => ['items_id' => $tickets_id, 'itemtype' => 'Ticket'], 'LIMIT' => 1]) as $row) {
             $exists = true;
         }
         if ($exists) {
-            $DB->update(self::FIELDS_TABLE, [self::FIELDS_STATE_COLUMN => $state], ['items_id' => $tickets_id, 'itemtype' => 'Ticket']);
+            $DB->update(self::FIELDS_TABLE, [$column => $value], ['items_id' => $tickets_id, 'itemtype' => 'Ticket']);
         } else {
             $DB->insert(self::FIELDS_TABLE, [
-                'items_id'                     => $tickets_id,
-                'itemtype'                     => 'Ticket',
-                'plugin_fields_containers_id'  => self::FIELDS_CONTAINER_ID,
-                'entities_id'                  => $entities_id,
-                self::FIELDS_STATE_COLUMN      => $state,
+                'items_id'                    => $tickets_id,
+                'itemtype'                    => 'Ticket',
+                'plugin_fields_containers_id' => self::FIELDS_CONTAINER_ID,
+                'entities_id'                 => $entities_id,
+                $column                       => $value,
             ]);
         }
+    }
+
+    // ── socfields' close requirement ("Acción Tomada" / "Causa Raíz") ──────────
+
+    // socfields normally blocks Ticket::update() itself (pre_item_update hook)
+    // when a required cascade field isn't filled for a Closed transition. We
+    // close tickets via a direct glpi_tickets update (see
+    // front/ticketaction.form.php) to bypass GLPI's own mandatory-fields
+    // policy on purpose — but that also skips socfields' hook entirely, so we
+    // have to replicate its check here rather than silently violate it.
+    // Returns the missing "Parent / Child" labels; empty array means OK to close.
+    static function getMissingSocfieldsRequirements(int $tickets_id, int $itilcategories_id): array {
+        global $DB;
+        if (!$DB->tableExists('glpi_plugin_socfields_fields')) {
+            return [];
+        }
+
+        if ($DB->tableExists('glpi_plugin_socfields_category_config')) {
+            foreach ($DB->request([
+                'FROM'  => 'glpi_plugin_socfields_category_config',
+                'WHERE' => ['itilcategories_id' => $itilcategories_id],
+                'LIMIT' => 1,
+            ]) as $row) {
+                if (!$row['active']) {
+                    return []; // socfields opted out for this category — nothing to require
+                }
+            }
+        }
+
+        $missing = [];
+        foreach ($DB->request(['FROM' => 'glpi_plugin_socfields_fields', 'WHERE' => ['required' => 1]]) as $field) {
+            $field_id = (int) $field['id'];
+            $filled   = false;
+            foreach ($DB->request([
+                'FROM'  => 'glpi_plugin_socfields_ticket_values',
+                'WHERE' => ['tickets_id' => $tickets_id, 'field_id' => $field_id],
+                'LIMIT' => 1,
+            ]) as $val) {
+                if (!empty($val['parent_value']) && !empty($val['child_value'])) {
+                    $filled = true;
+                }
+            }
+            if (!$filled) {
+                $missing[] = $field['label_parent'] . ' / ' . $field['label_child'];
+            }
+        }
+        return $missing;
     }
 }
