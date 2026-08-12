@@ -13,9 +13,11 @@
             <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}" />
 
             <div class="card-header">
-                <h3 class="card-title">{{ __('Incidente de Seguridad', 'socsecincident') }}</h3>
-                <div class="text-muted small">
-                    {{ __('Estado actual', 'socsecincident') }}: <strong>{{ current_state }}</strong>
+                <div>
+                    <h3 class="card-title mb-1">{{ __('Incidente de Seguridad', 'socsecincident') }}</h3>
+                    <div class="text-muted small">
+                        {{ __('Estado actual', 'socsecincident') }}: <strong>{{ current_state }}</strong>
+                    </div>
                 </div>
             </div>
             <div class="card-body">
@@ -39,11 +41,33 @@
                         }
                     ) }}
 
+                    <div class="form-field col-12 mt-2">
+                        {% set fup_template_lbl %}
+                            <i class="{{ 'ITILFollowupTemplate'|itemtype_icon }} me-1"
+                               title="{{ _n('Followup template', 'Followup templates', get_plural_number()) }}"></i>
+                            {{ __('Plantilla de seguimiento', 'socsecincident') }}
+                        {% endset %}
+                        {{ fields.dropdownField(
+                            'ITILFollowupTemplate',
+                            'itilfollowuptemplates_id',
+                            0,
+                            fup_template_lbl,
+                            {
+                                'full_width': true,
+                                'icon_label': true,
+                                'on_change': 'socsecincident_progress_template_update' ~ rand ~ '(this.value)',
+                                'entity': ticket.fields['entities_id'],
+                                'rand': rand,
+                            }
+                        ) }}
+                    </div>
+
                     {{ fields.textareaField(
                         'comment',
                         '',
                         __('Comment', 'socsecincident'),
                         {
+                            'id': 'security_incident_progress_content_' ~ rand,
                             'full_width': true,
                             'required': false,
                             'label': true,
@@ -69,4 +93,23 @@
             {% endif %}
         </form>
     </div>
+    {% if next_stages is not empty %}
+    <script>
+        function socsecincident_progress_template_update{{ rand }}(value) {
+            $.ajax({
+                url: `${CFG_GLPI.root_doc}/ajax/itilfollowup.php`,
+                type: 'POST',
+                data: {
+                    itilfollowuptemplates_id: value,
+                    items_id: '{{ ticket.getID()|e('js') }}',
+                    itemtype: 'Ticket'
+                }
+            }).done(function (data) {
+                if (data.content && data.content.trim() !== '') {
+                    setRichTextEditorContent("security_incident_progress_content_{{ rand }}", data.content);
+                }
+            });
+        }
+    </script>
+    {% endif %}
 {% endblock %}
