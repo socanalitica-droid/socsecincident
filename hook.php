@@ -14,8 +14,8 @@ function plugin_socsecincident_install() {
     if (!$DB->tableExists('glpi_plugin_socsecincident_profiles')) {
         $DB->doQuery("
             CREATE TABLE `glpi_plugin_socsecincident_profiles` (
-                `id`          int(11) UNSIGNED NOT NULL AUTO_INCREMENT,
-                `profiles_id` int(11) UNSIGNED NOT NULL,
+                `id`          int unsigned NOT NULL AUTO_INCREMENT,
+                `profiles_id` int unsigned NOT NULL,
                 PRIMARY KEY (`id`),
                 UNIQUE KEY `profiles_id` (`profiles_id`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC
@@ -30,9 +30,9 @@ function plugin_socsecincident_install() {
     if (!$DB->tableExists('glpi_plugin_socsecincident_incidents')) {
         $DB->doQuery("
             CREATE TABLE `glpi_plugin_socsecincident_incidents` (
-                `id`              int(11) UNSIGNED NOT NULL AUTO_INCREMENT,
-                `tickets_id`      int(11) UNSIGNED NOT NULL,
-                `users_id`        int(11) UNSIGNED NOT NULL,
+                `id`              int unsigned NOT NULL AUTO_INCREMENT,
+                `tickets_id`      int unsigned NOT NULL,
+                `users_id`        int unsigned NOT NULL,
                 `classification`  varchar(32) NOT NULL,
                 `date_creation`   timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (`id`),
