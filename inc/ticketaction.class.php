@@ -34,8 +34,13 @@ class PluginSocsecincidentTicketAction {
             return [];
         }
 
+        // GLPI's own footer.html.twig builds the dropdown-item's CSS class as
+        // "action-{{ array key }}" (not from the 'class' field below, which
+        // is only used for the collapsible block's HTML id) — so this key
+        // must be hyphenated to match the .action-security-incident rule in
+        // our CSS, not underscored.
         return [
-            'security_incident' => [
+            'security-incident' => [
                 'type'        => 'PluginSocsecincidentTicketAction',
                 'class'       => 'action-security-incident',
                 'icon'        => 'ti ti-shield-exclamation',
