@@ -1,0 +1,72 @@
+{% extends 'components/itilobject/timeline/form_timeline_item.html.twig' %}
+{% import 'components/form/fields_macros.html.twig' as fields %}
+
+{% block timeline_card %}
+    <div class="security-incident card mt-4">
+        <form name="security_incident_progress_form" id="security_incident_progress_form_{{ rand }}"
+              class="d-flex flex-column bg-white" method="post"
+              action="{{ action }}"
+              enctype="multipart/form-data"
+              data-track-changes="true" data-submit-once>
+
+            <input type="hidden" name="tickets_id" value="{{ ticket.getID() }}" />
+            <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}" />
+
+            <div class="card-header">
+                <h3 class="card-title">{{ __('Incidente de Seguridad', 'socsecincident') }}</h3>
+                <div class="text-muted small">
+                    {{ __('Estado actual', 'socsecincident') }}: <strong>{{ current_state }}</strong>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if next_stages is empty %}
+                    <p class="text-muted mb-0">{{ __('No hay más estados a los que avanzar.', 'socsecincident') }}</p>
+                {% else %}
+                    {% set stage_options = {'': '-- ' ~ __('Selecciona el siguiente estado', 'socsecincident') ~ ' --'} %}
+                    {% for stage in next_stages %}
+                        {% set stage_options = stage_options|merge({(stage): stage}) %}
+                    {% endfor %}
+                    {{ fields.dropdownArrayField(
+                        'new_state',
+                        '',
+                        stage_options,
+                        __('Siguiente estado', 'socsecincident'),
+                        {
+                            'full_width': true,
+                            'required': true,
+                            'label': true,
+                            'rand': rand,
+                        }
+                    ) }}
+
+                    {{ fields.textareaField(
+                        'comment',
+                        '',
+                        __('Comment', 'socsecincident'),
+                        {
+                            'full_width': true,
+                            'required': false,
+                            'label': true,
+                            'is_horizontal': false,
+                            'enable_richtext': true,
+                            'enable_fileupload': false,
+                            'enable_mentions': true,
+                            'entities_id': ticket.fields['entities_id'],
+                            'rand': rand,
+                        }
+                    ) }}
+                {% endif %}
+            </div>
+            {% if next_stages is not empty %}
+                <div class="d-flex card-footer justify-content-center">
+                    <div class="input-group justify-content-center">
+                        <button class="btn btn-primary me-2" type="submit" name="confirm_security_incident_progress">
+                            <i class="ti ti-arrow-big-right-lines"></i>
+                            <span>{{ _x('button', 'Update') }}</span>
+                        </button>
+                    </div>
+                </div>
+            {% endif %}
+        </form>
+    </div>
+{% endblock %}

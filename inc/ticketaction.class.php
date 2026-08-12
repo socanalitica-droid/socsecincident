@@ -27,6 +27,13 @@ class PluginSocsecincidentTicketAction {
             return [];
         }
 
+        // Once the incident reaches the last stage (Cerrado) the ticket is
+        // already closed by us — nothing left to advance to.
+        $current_state = PluginSocsecincidentConfig::getIncidentState($ticket->getID());
+        if ($current_state === 'Cerrado') {
+            return [];
+        }
+
         return [
             'security_incident' => [
                 'type'        => 'PluginSocsecincidentTicketAction',
@@ -43,10 +50,30 @@ class PluginSocsecincidentTicketAction {
         /** @var Ticket $ticket */
         $ticket = $options['parent'];
 
-        TemplateRenderer::getInstance()->display('@socsecincident/ticketaction_form.html.twig', [
-            'action' => Plugin::getWebDir('socsecincident') . '/front/ticketaction.form.php',
-            'ticket' => $ticket,
-            'rand'   => mt_rand(),
+        $current_state = PluginSocsecincidentConfig::getIncidentState($ticket->getID());
+        $rand          = mt_rand();
+        $action_url    = Plugin::getWebDir('socsecincident') . '/front/ticketaction.form.php';
+
+        // Not declared yet: show the original "declare incident" modal
+        // (comment + followup template + Materializado/No materializado/
+        // Pendiente Veredicto classification).
+        if ($current_state === null) {
+            TemplateRenderer::getInstance()->display('@socsecincident/ticketaction_form.html.twig', [
+                'action' => $action_url,
+                'ticket' => $ticket,
+                'rand'   => $rand,
+            ]);
+            return;
+        }
+
+        // Already declared: show the "advance stage" modal instead, offering
+        // only the stages still ahead of the current one.
+        TemplateRenderer::getInstance()->display('@socsecincident/ticketaction_progress_form.html.twig', [
+            'action'        => $action_url,
+            'ticket'        => $ticket,
+            'rand'          => $rand,
+            'current_state' => $current_state,
+            'next_stages'   => PluginSocsecincidentConfig::getNextStages($current_state),
         ]);
     }
 }

@@ -9,6 +9,28 @@ class PluginSocsecincidentConfig extends CommonGLPI {
     // ever changes.
     const TARGET_CATEGORY_NAME = 'Incidente de Seguridad';
 
+    // The "Estado Incidente Seguridad" field lives in the "fields" plugin
+    // (Additional Fields), container "secop" (SecOps). Table/column names
+    // verified directly against this instance's schema — the "fields"
+    // plugin doesn't expose a lookup-by-name API for its per-itemtype value
+    // tables, so these stay hardcoded rather than guessed at runtime.
+    const FIELDS_TABLE        = 'glpi_plugin_fields_ticketsecops';
+    const FIELDS_STATE_COLUMN = 'estadoincidenteseguridadfield';
+    const FIELDS_CONTAINER_ID = 2;
+
+    // Incident lifecycle, in forward-only order. Declaring the incident
+    // (first use of the timeline button) jumps straight to the first stage;
+    // every later use of the same button advances to a stage further down
+    // this list. Reaching the last stage also closes the ticket.
+    const STAGES = [
+        'Investigación',
+        'Contenido',
+        'Comprometido / Confirmado',
+        'Erradicado',
+        'En recuperación',
+        'Cerrado',
+    ];
+
     static function getTypeName($nb = 0) { return 'SOC Security Incident'; }
     static function getMenuName()        { return 'SOC Security Incident'; }
 
@@ -70,5 +92,52 @@ class PluginSocsecincidentConfig extends CommonGLPI {
             return (int) $row['id'];
         }
         return 0;
+    }
+
+    // ── Incident lifecycle state ("Estado Incidente Seguridad") ────────────────
+
+    // Null means "not declared yet" (no row, or the fields plugin's own
+    // "No Confirmado" default with nothing actually stored).
+    static function getIncidentState(int $tickets_id): ?string {
+        global $DB;
+        foreach ($DB->request([
+            'SELECT' => [self::FIELDS_STATE_COLUMN],
+            'FROM'   => self::FIELDS_TABLE,
+            'WHERE'  => ['items_id' => $tickets_id, 'itemtype' => 'Ticket'],
+            'LIMIT'  => 1,
+        ]) as $row) {
+            $value = $row[self::FIELDS_STATE_COLUMN] ?? null;
+            return ($value === null || $value === '') ? null : $value;
+        }
+        return null;
+    }
+
+    // Stages strictly after $current_state. Empty array if not declared yet
+    // (nothing to advance to) or already at the last stage (Cerrado).
+    static function getNextStages(?string $current_state): array {
+        $idx = $current_state === null ? false : array_search($current_state, self::STAGES, true);
+        if ($idx === false) {
+            return [];
+        }
+        return array_slice(self::STAGES, $idx + 1);
+    }
+
+    static function setIncidentState(int $tickets_id, int $entities_id, string $state): void {
+        global $DB;
+        $exists = false;
+        foreach ($DB->request(['FROM' => self::FIELDS_TABLE, 'WHERE' => ['items_id' => $tickets_id, 'itemtype' => 'Ticket'], 'LIMIT' => 1]) as $row) {
+            $exists = true;
+        }
+        if ($exists) {
+            $DB->update(self::FIELDS_TABLE, [self::FIELDS_STATE_COLUMN => $state], ['items_id' => $tickets_id, 'itemtype' => 'Ticket']);
+        } else {
+            $DB->insert(self::FIELDS_TABLE, [
+                'items_id'                     => $tickets_id,
+                'itemtype'                     => 'Ticket',
+                'plugin_fields_containers_id'  => self::FIELDS_CONTAINER_ID,
+                'entities_id'                  => $entities_id,
+                self::FIELDS_STATE_COLUMN      => $state,
+            ]);
+        }
     }
 }

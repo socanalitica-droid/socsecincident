@@ -12,6 +12,7 @@ function plugin_init_socsecincident() {
 
     $PLUGIN_HOOKS['csrf_compliant']['socsecincident'] = true;
     $PLUGIN_HOOKS['config_page']['socsecincident']    = 'front/config.form.php';
+    $PLUGIN_HOOKS['add_css']['socsecincident'][]      = 'css/socsecincident.css';
 
     if (isset($_SESSION['glpiactiveentities'])) {
         // Admin menu under Setup (same mechanism as socfields/socautoassign)

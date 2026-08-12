@@ -1,0 +1,11 @@
+/* Same red used by the "escalade" plugin's own "Escalate" entry (#F8CBCBFF),
+   so "Incidente de Seguridad" reads as an equally critical action in the
+   timeline's answer-action split dropdown. */
+
+.itil-footer .action-security-incident {
+    background-color: #F8CBCBFF;
+}
+
+a.dropdown-item.action-security-incident.answer-action {
+    background-color: #F8CBCBFF;
+}
