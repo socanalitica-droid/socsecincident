@@ -96,8 +96,14 @@ class PluginSocsecincidentConfig extends CommonGLPI {
 
     // ── Incident lifecycle state ("Estado Incidente Seguridad") ────────────────
 
-    // Null means "not declared yet" (no row, or the fields plugin's own
-    // "No Confirmado" default with nothing actually stored).
+    // The "fields" plugin materializes its own default_value ("No Confirmado")
+    // into the row as soon as the ticket page is rendered/saved once — so an
+    // undeclared incident isn't reliably represented by a null/empty column,
+    // it shows up as this literal string too.
+    const NOT_DECLARED_VALUE = 'No Confirmado';
+
+    // Null means "not declared yet" (no row, empty column, or still at the
+    // fields plugin's own "No Confirmado" default).
     static function getIncidentState(int $tickets_id): ?string {
         global $DB;
         foreach ($DB->request([
@@ -107,7 +113,10 @@ class PluginSocsecincidentConfig extends CommonGLPI {
             'LIMIT'  => 1,
         ]) as $row) {
             $value = $row[self::FIELDS_STATE_COLUMN] ?? null;
-            return ($value === null || $value === '') ? null : $value;
+            if ($value === null || $value === '' || $value === self::NOT_DECLARED_VALUE) {
+                return null;
+            }
+            return $value;
         }
         return null;
     }
