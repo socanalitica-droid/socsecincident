@@ -28,12 +28,48 @@ class PluginSocsecincidentConfig extends CommonGLPI {
     // every later use of the same button advances to a stage further down
     // this list. Reaching the last stage also closes the ticket.
     const STAGES = [
-        'Investigación',
-        'Contenido',
-        'Comprometido / Confirmado',
-        'Erradicado',
-        'En recuperación',
+        'Nivel 1. Detección y Contención Inicial',
+        'Nivel 2. Análisis y Respuesta Técnica',
+        'Nivel 3. Coordinación y Remediación Estratégica',
+        'Nivel 4. Escalamiento Ejecutivo y Legal',
         'Cerrado',
+    ];
+
+    // Shown as helper text under the "Siguiente estado" dropdown so analysts
+    // don't have to remember what each level covers.
+    const STAGE_DESCRIPTIONS = [
+        'Nivel 1. Detección y Contención Inicial' =>
+            'Identificación, validación inicial, registro, enriquecimiento básico y '
+            . 'aplicación de medidas de contención inmediata cuando estas se encuentran '
+            . 'dentro de las capacidades operativas del monitoreo.',
+        'Nivel 2. Análisis y Respuesta Técnica' =>
+            'Investigación técnica especializada, correlación de múltiples fuentes, '
+            . 'determinación del alcance, validación de explotación, contención avanzada, '
+            . 'coordinación técnica y verificación de las medidas implementadas.',
+        'Nivel 3. Coordinación y Remediación Estratégica' =>
+            'Situaciones que requieren coordinación entre diferentes áreas, remediaciones '
+            . 'estructurales, gestión de riesgos significativos, participación de '
+            . 'responsables de servicio, procesos de investigación de inteligencia, '
+            . 'análisis de hipótesis de hunting, vigilancia digital de posible información '
+            . 'comprometida, o decisiones que exceden la respuesta técnica.',
+        'Nivel 4. Escalamiento Ejecutivo y Legal' =>
+            'Situaciones con impacto significativo para la organización, compromiso '
+            . 'confirmado de información sensible, obligaciones regulatorias, implicaciones '
+            . 'legales, contractuales o reputacionales relevantes.',
+    ];
+
+    // Old lifecycle → new lifecycle, applied as a one-off data migration when
+    // this taxonomy replaced the previous "Investigación / Contenido / ..."
+    // stages, so tickets already in progress don't get silently read back as
+    // "not declared". Kept here for reference, not applied automatically on
+    // every request — see the migration run from the SSM session that shipped
+    // this change.
+    const LEGACY_STAGE_MIGRATION = [
+        'Investigación'             => 'Nivel 1. Detección y Contención Inicial',
+        'Contenido'                 => 'Nivel 1. Detección y Contención Inicial',
+        'Comprometido / Confirmado' => 'Nivel 2. Análisis y Respuesta Técnica',
+        'Erradicado'                => 'Nivel 2. Análisis y Respuesta Técnica',
+        'En recuperación'           => 'Nivel 3. Coordinación y Remediación Estratégica',
     ];
 
     static function getTypeName($nb = 0) { return 'SOC Security Incident'; }

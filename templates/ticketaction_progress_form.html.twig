@@ -41,6 +41,7 @@
                             'on_change': 'socsecincident_toggle_classification' ~ rand ~ '(this.value)',
                         }
                     ) }}
+                    <div class="form-text small" id="socsecincident_stage_hint_{{ rand }}"></div>
 
                     {# Available at every stage, not just on close — the analyst can change
                        their mind about Materializado/No materializado at any point. Optional
@@ -119,9 +120,16 @@
     </div>
     {% if next_stages is not empty %}
     <script>
+        var socsecincident_stage_descriptions{{ rand }} = {
+            {% for stage, description in stage_descriptions %}
+                {{ stage|json_encode|raw }}: {{ description|json_encode|raw }}{{ not loop.last ? ',' : '' }}
+            {% endfor %}
+        };
+
         function socsecincident_toggle_classification{{ rand }}(value) {
-            var select = document.getElementById('dropdown_classification{{ rand }}');
-            var hint   = document.getElementById('socsecincident_classification_hint_{{ rand }}');
+            var select     = document.getElementById('dropdown_classification{{ rand }}');
+            var hint       = document.getElementById('socsecincident_classification_hint_{{ rand }}');
+            var stage_hint = document.getElementById('socsecincident_stage_hint_{{ rand }}');
             var is_closing = (value === 'Cerrado');
             if (select) {
                 select.required = is_closing;
@@ -130,6 +138,9 @@
                 hint.textContent = is_closing
                     ? '{{ __('Obligatorio al cerrar: indica si el incidente quedó Materializado o No materializado.', 'socsecincident')|e('js') }}'
                     : '{{ __('Opcional — solo si quieres actualizar la clasificación en este paso.', 'socsecincident')|e('js') }}';
+            }
+            if (stage_hint) {
+                stage_hint.textContent = socsecincident_stage_descriptions{{ rand }}[value] || '';
             }
         }
 

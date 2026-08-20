@@ -9,17 +9,32 @@ Plugin para GLPI 11 desarrollado por el **SOC Team de Linktic**. Agrega el botó
 - **Ciclo de vida del incidente**, reutilizando el mismo botón en cada paso:
 
   ```
-  (declarar) → Investigación → Contenido → Comprometido / Confirmado → Erradicado → En recuperación → Cerrado
+  (declarar) → Nivel 1. Detección y Contención Inicial
+             → Nivel 2. Análisis y Respuesta Técnica
+             → Nivel 3. Coordinación y Remediación Estratégica
+             → Nivel 4. Escalamiento Ejecutivo y Legal
+             → Cerrado
   ```
 
-  - **1er clic (declarar):** modal con comentario enriquecido, selector de plantilla de seguimiento (autocompleta el comentario) y clasificación obligatoria **Materializado / No materializado / Pendiente Veredicto**. Pasa el ticket a **En curso (asignada)**, cambia su categoría ITIL a **"Incidente de Seguridad"**, recalcula el SLA/OLA correspondiente, y dispara el ciclo de vida en el estado **Investigación**.
-  - **Clics siguientes (avanzar estado):** el mismo botón muestra un modal distinto — selector con los estados que faltan por recorrer, plantilla de seguimiento opcional y comentario opcional. Cada avance agrega un seguimiento al ticket.
-  - **Al seleccionar "Cerrado":** se pide una segunda clasificación obligatoria — **Materializado / No materializado** (ya sin "Pendiente Veredicto", porque no es una respuesta final válida). Antes de cerrar, valida que **Acción Tomada** y **Causa Raíz** (plugin `socfields`) estén diligenciados; si falta alguno, bloquea el cierre con un mensaje de error y no modifica el ticket. Si todo está en orden, cierra el ticket directamente.
+  | Nivel | Cubre |
+  |-------|-------|
+  | 1. Detección y Contención Inicial | Identificación, validación inicial, registro, enriquecimiento básico y contención inmediata dentro de las capacidades del monitoreo. |
+  | 2. Análisis y Respuesta Técnica | Investigación técnica especializada, correlación de fuentes, determinación del alcance, validación de explotación, contención avanzada, coordinación técnica. |
+  | 3. Coordinación y Remediación Estratégica | Coordinación entre áreas, remediaciones estructurales, gestión de riesgos, inteligencia/hunting, vigilancia digital, decisiones que exceden la respuesta técnica. |
+  | 4. Escalamiento Ejecutivo y Legal | Impacto significativo, compromiso confirmado de información sensible, obligaciones regulatorias/legales/contractuales/reputacionales. |
+
+  Las descripciones completas viven en `PluginSocsecincidentConfig::STAGE_DESCRIPTIONS` y se muestran como texto de ayuda en el modal al seleccionar el siguiente estado.
+
+  - **1er clic (declarar):** modal con comentario enriquecido, selector de plantilla de seguimiento (autocompleta el comentario) y clasificación obligatoria **Materializado / No materializado / Pendiente Veredicto**. Pasa el ticket a **En curso (asignada)**, cambia su categoría ITIL a **"Incidente de Seguridad"**, recalcula el SLA/OLA correspondiente, y arranca el ciclo de vida en **Nivel 1**.
+  - **Clics siguientes (avanzar estado):** el mismo botón muestra un modal distinto — selector con los niveles que faltan por recorrer (con su descripción), clasificación **opcional** (Materializado/No materializado — el analista puede cambiar de opinión en cualquier nivel, no solo al declarar o al cerrar), plantilla de seguimiento opcional y comentario opcional. Cada avance agrega un seguimiento al ticket.
+  - **Al seleccionar "Cerrado":** la clasificación deja de ser opcional — se exige **Materializado / No materializado** (ya sin "Pendiente Veredicto", porque no es una respuesta final válida). Antes de cerrar, valida que **Acción Tomada** y **Causa Raíz** (plugin `socfields`) estén diligenciados; si falta alguno, bloquea el cierre con un mensaje de error y no modifica el ticket. Si todo está en orden, cierra el ticket directamente.
   - **Ticket reabierto:** si un ticket que este plugin cerró se reabre (cambia de estado fuera de Cerrado), el ciclo de vida se reinicia — el botón vuelve a mostrar el modal de declarar desde cero.
 - **Campos espejados en el plugin `fields`** (contenedor "SecOps" de la instancia):
-  - `Estado Incidente Seguridad` — el estado actual del ciclo de vida.
-  - `Incidente Seguridad` — la clasificación vigente (la elegida al declarar, sobrescrita por la clasificación final al cerrar).
+  - `Estado Incidente Seguridad` — el nivel actual del ciclo de vida.
+  - `Incidente Seguridad` — la clasificación vigente (Materializado/No materializado/Pendiente Veredicto), actualizable en cualquier nivel.
 - **Auditoría propia** — cada declaración inicial queda registrada (ticket, usuario, clasificación, fecha) en una tabla del plugin, además de quedar en el timeline del ticket.
+
+> **Migración de ciclo de vida (2026-08):** el ciclo original (Investigación → Contenido → Comprometido/Confirmado → Erradicado → En recuperación → Cerrado) se reemplazó por los 4 niveles de arriba. Los tickets que ya tenían un estado del ciclo viejo se migraron una sola vez con este mapeo (`PluginSocsecincidentConfig::LEGACY_STAGE_MIGRATION`): Investigación/Contenido → Nivel 1 · Comprometido-Confirmado/Erradicado → Nivel 2 · En recuperación → Nivel 3. Si se necesita repetir esta migración (p. ej. en otro ambiente), es un script de una sola corrida, no algo que el plugin haga automáticamente en cada request.
 
 ## Compatibilidad
 

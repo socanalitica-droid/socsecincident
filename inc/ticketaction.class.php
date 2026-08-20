@@ -76,11 +76,12 @@ class PluginSocsecincidentTicketAction {
         // Already declared: show the "advance stage" modal instead, offering
         // only the stages still ahead of the current one.
         TemplateRenderer::getInstance()->display('@socsecincident/ticketaction_progress_form.html.twig', [
-            'action'        => $action_url,
-            'ticket'        => $ticket,
-            'rand'          => $rand,
-            'current_state' => $current_state,
-            'next_stages'   => PluginSocsecincidentConfig::getNextStages($current_state),
+            'action'             => $action_url,
+            'ticket'             => $ticket,
+            'rand'               => $rand,
+            'current_state'      => $current_state,
+            'next_stages'        => PluginSocsecincidentConfig::getNextStages($current_state),
+            'stage_descriptions' => PluginSocsecincidentConfig::STAGE_DESCRIPTIONS,
         ]);
     }
 }

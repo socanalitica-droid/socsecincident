@@ -253,8 +253,8 @@ $DB->insert('glpi_plugin_socsecincident_incidents', [
     'classification' => $classification,
 ]);
 
-// First stage of the lifecycle — matches PluginSocsecincidentConfig::STAGES[0].
-PluginSocsecincidentConfig::setIncidentState($tickets_id, $entities_id, 'Investigación');
+// First stage of the lifecycle.
+PluginSocsecincidentConfig::setIncidentState($tickets_id, $entities_id, PluginSocsecincidentConfig::STAGES[0]);
 PluginSocsecincidentConfig::setClassification($tickets_id, $entities_id, $classification_labels[$classification]);
 
 Session::addMessageAfterRedirect(
