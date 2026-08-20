@@ -44,18 +44,20 @@ if (isset($_POST['confirm_security_incident_progress'])) {
         exit();
     }
 
-    $final_classification_labels = [
+    $classification_labels = [
         'materialized'     => __('Materializado', 'socsecincident'),
         'not_materialized' => __('No materializado', 'socsecincident'),
     ];
 
-    // Closing asks one more required question — the initial classification
-    // (Materializado/No materializado/Pendiente Veredicto) may have been a
-    // guess made while still investigating; the final answer only has two
-    // valid values, so it's asked again rather than reused.
+    // The analyst can change Materializado/No materializado at any stage, not
+    // just once at the start or end — optional everywhere except when
+    // advancing to "Cerrado", where a final answer is mandatory (no
+    // "Pendiente Veredicto" — not a valid closing verdict).
+    $classification = $_POST['classification'] ?? '';
+    $classification_chosen = isset($classification_labels[$classification]);
+
     if ($new_state === 'Cerrado') {
-        $final_classification = $_POST['final_classification'] ?? '';
-        if (!isset($final_classification_labels[$final_classification])) {
+        if (!$classification_chosen) {
             Session::addMessageAfterRedirect(
                 __('Debes indicar la clasificación final (Materializado o No materializado) para cerrar el incidente.', 'socsecincident'),
                 true,
@@ -89,9 +91,9 @@ if (isset($_POST['confirm_security_incident_progress'])) {
 
     $comment = trim($_POST['comment'] ?? '');
     $content = '<strong>' . __('Estado del incidente actualizado a', 'socsecincident') . ':</strong> ' . $new_state;
-    if ($new_state === 'Cerrado') {
-        $content .= '<br><strong>' . __('Clasificación final', 'socsecincident') . ':</strong> '
-            . $final_classification_labels[$final_classification];
+    if ($classification_chosen) {
+        $content .= '<br><strong>' . __('Clasificación', 'socsecincident') . ':</strong> '
+            . $classification_labels[$classification];
     }
     if ($comment !== '') {
         $content = $comment . '<br><br>' . $content;
@@ -107,13 +109,15 @@ if (isset($_POST['confirm_security_incident_progress'])) {
 
     PluginSocsecincidentConfig::setIncidentState($tickets_id, $entities_id, $new_state);
 
-    if ($new_state === 'Cerrado') {
+    if ($classification_chosen) {
         PluginSocsecincidentConfig::setClassification(
             $tickets_id,
             $entities_id,
-            $final_classification_labels[$final_classification]
+            $classification_labels[$classification]
         );
+    }
 
+    if ($new_state === 'Cerrado') {
         // Direct write, same proven approach used for bulk-closing tickets on
         // this instance: Ticket::update() enforces GLPI's mandatory-fields-
         // before-close policy (e.g. technician assignment), which would

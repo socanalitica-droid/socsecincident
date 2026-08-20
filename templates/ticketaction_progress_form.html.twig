@@ -38,29 +38,31 @@
                             'required': true,
                             'label': true,
                             'rand': rand,
-                            'on_change': 'socsecincident_toggle_final_classification' ~ rand ~ '(this.value)',
+                            'on_change': 'socsecincident_toggle_classification' ~ rand ~ '(this.value)',
                         }
                     ) }}
 
-                    {# Only relevant when advancing straight to "Cerrado": the initial
-                       classification chosen on declare may no longer hold, so ask again
-                       — restricted to the two final answers, no "Pendiente Veredicto". #}
-                    <div class="form-field col-12 mt-2" id="socsecincident_final_classification_{{ rand }}" style="display:none;">
+                    {# Available at every stage, not just on close — the analyst can change
+                       their mind about Materializado/No materializado at any point. Optional
+                       everywhere except when advancing to "Cerrado", where a final answer is
+                       mandatory (no "Pendiente Veredicto" — not a valid closing verdict). #}
+                    <div class="form-field col-12 mt-2">
                         {{ fields.dropdownArrayField(
-                            'final_classification',
+                            'classification',
                             '',
                             {
-                                '': '-- ' ~ __('Selecciona la clasificación final', 'socsecincident') ~ ' --',
+                                '': '-- ' ~ __('No cambiar la clasificación', 'socsecincident') ~ ' --',
                                 'materialized': __('Materializado', 'socsecincident'),
                                 'not_materialized': __('No materializado', 'socsecincident'),
                             },
-                            __('Clasificación final', 'socsecincident'),
+                            __('Clasificación', 'socsecincident'),
                             {
                                 'full_width': true,
                                 'label': true,
                                 'rand': rand,
                             }
                         ) }}
+                        <div class="form-text small" id="socsecincident_classification_hint_{{ rand }}"></div>
                     </div>
 
                     <div class="form-field col-12 mt-2">
@@ -117,16 +119,17 @@
     </div>
     {% if next_stages is not empty %}
     <script>
-        function socsecincident_toggle_final_classification{{ rand }}(value) {
-            var wrapper = document.getElementById('socsecincident_final_classification_{{ rand }}');
-            var select  = document.getElementById('dropdown_final_classification{{ rand }}');
-            if (!wrapper) {
-                return;
-            }
+        function socsecincident_toggle_classification{{ rand }}(value) {
+            var select = document.getElementById('dropdown_classification{{ rand }}');
+            var hint   = document.getElementById('socsecincident_classification_hint_{{ rand }}');
             var is_closing = (value === 'Cerrado');
-            wrapper.style.display = is_closing ? '' : 'none';
             if (select) {
                 select.required = is_closing;
+            }
+            if (hint) {
+                hint.textContent = is_closing
+                    ? '{{ __('Obligatorio al cerrar: indica si el incidente quedó Materializado o No materializado.', 'socsecincident')|e('js') }}'
+                    : '{{ __('Opcional — solo si quieres actualizar la clasificación en este paso.', 'socsecincident')|e('js') }}';
             }
         }
 
